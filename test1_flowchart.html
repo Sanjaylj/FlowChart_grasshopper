@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Grasshopper Definition Flowchart</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+mermaid.initialize({startOnLoad:true, securityLevel:'loose'});
+window.addEventListener('load', function() {
+  var tooltip = document.createElement('div');
+  tooltip.id = 'gh-tooltip';
+  tooltip.style.cssText = 'position:fixed;background:#333;color:#fff;padding:8px 12px;border-radius:4px;font-size:12px;max-width:250px;z-index:1000;display:none;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,0.3);';
+  document.body.appendChild(tooltip);
+  var tooltips = {
+    'N0': "Create a line between two points.",
+    'N1': "Contains a collection of three-dimensional points",
+    'N2': "Contains a collection of three-dimensional points"
+  };
+  var downstream = {
+    'N1': ['N0'],
+    'N2': ['N0']
+  };
+  var upstream = {
+    'N0': ['N1', 'N2']
+  };
+  function getNodeKey(node) {
+    var match = node.id.match(/flowchart-(N\d+)-/);
+    return match ? match[1] : node.id;
+  }
+  function collectDownstream(nodeId, maxDepth, visited, depth) {
+    if (depth > maxDepth) return;
+    if (visited[nodeId] !== undefined && visited[nodeId] <= depth) return;
+    visited[nodeId] = depth;
+    if (downstream[nodeId]) {
+      downstream[nodeId].forEach(function(neighbor) {
+        collectDownstream(neighbor, maxDepth, visited, depth + 1);
+      });
+    }
+  }
+  function getEdgeEndpoints(edgeElement) {
+    var id = edgeElement.id;
+    if (!id) return null;
+    var match = id.match(/^L-([A-Za-z0-9_]+)-([A-Za-z0-9_]+)-/);
+    if (match) return { from: match[1], to: match[2] };
+    match = id.match(/^L_([A-Za-z0-9_]+)_([A-Za-z0-9_]+)_/);
+    if (match) return { from: match[1], to: match[2] };
+    return null;
+  }
+  function highlight(nodeId) {
+    var active = {};
+    active[nodeId] = 0;
+    collectDownstream(nodeId, 3, active, 1);
+    document.querySelectorAll('.node').forEach(function(node) {
+      var key = getNodeKey(node);
+      var dist = active[key];
+      node.classList.remove('node-selected', 'node-active-group', 'node-faint');
+      if (dist !== undefined) {
+        node.style.opacity = '1';
+        node.classList.add('node-active-group');
+        if (dist === 0) { node.classList.add('node-selected'); }
+      } else {
+        node.style.opacity = '1';
+        node.classList.add('node-faint');
+      }
+    });
+    document.querySelectorAll('.edgePath, .edgeLabel').forEach(function(edge) {
+      var endpoints = getEdgeEndpoints(edge);
+      edge.classList.remove('edge-highlight-active', 'edge-highlight-dim');
+      if (endpoints && active[endpoints.from] !== undefined && active[endpoints.to] !== undefined) {
+        var maxDist = Math.max(active[endpoints.from], active[endpoints.to]);
+        edge.style.opacity = '1';
+        edge.classList.add('edge-highlight-active');
+      } else {
+        edge.style.opacity = '0.12';
+        edge.classList.add('edge-highlight-dim');
+      }
+    });
+  }
+  function resetHighlight() {
+    document.querySelectorAll('.node').forEach(function(node) {
+      node.style.opacity = '1';
+      node.classList.remove('node-selected', 'node-active-group', 'node-faint');
+    });
+    document.querySelectorAll('.edgePath, .edgeLabel').forEach(function(edge) {
+      edge.style.opacity = '1';
+      edge.classList.remove('edge-highlight-active', 'edge-highlight-dim');
+    });
+  }
+  var resetBtn = document.createElement('button');
+  resetBtn.textContent = 'Reset Highlight';
+  resetBtn.style.cssText = 'margin-bottom:10px;padding:6px 12px;background:#4CAF50;color:#fff;border:none;border-radius:4px;cursor:pointer;';
+  resetBtn.addEventListener('click', resetHighlight);
+  var diagramContainer = document.querySelector('.mermaid');
+  if (diagramContainer) diagramContainer.parentNode.insertBefore(resetBtn, diagramContainer);
+  function attachListeners() {
+    document.querySelectorAll('.node').forEach(function(node) {
+      var id = getNodeKey(node);
+      node.addEventListener('click', function(e) {
+        e.stopPropagation();
+        highlight(id);
+      });
+      node.addEventListener('mouseenter', function(e) {
+        var text = tooltips[id];
+        if (text) {
+          tooltip.textContent = text;
+          tooltip.style.display = 'block';
+        }
+      });
+      node.addEventListener('mousemove', function(e) {
+        tooltip.style.left = (e.clientX + 12) + 'px';
+        tooltip.style.top = (e.clientY + 12) + 'px';
+      });
+      node.addEventListener('mouseleave', function() {
+        tooltip.style.display = 'none';
+      });
+    });
+  }
+  document.body.addEventListener('click', resetHighlight);
+  function waitForNodesAndAttach(attempts) {
+    if (document.querySelectorAll('.node').length > 0) {
+      attachListeners();
+      return;
+    }
+    if (attempts > 0) {
+      setTimeout(function() { waitForNodesAndAttach(attempts - 1); }, 100);
+    } else {
+      console.warn('Flowchart nodes did not render in time.');
+    }
+  }
+  waitForNodesAndAttach(50);
+});
+</script>
+<style>
+body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+h1 { color: #333; }
+h2 { color: #555; margin-top: 30px; }
+h3 { color: #666; margin-top: 20px; }
+.container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+th { background: #4CAF50; color: white; }
+tr:nth-child(even) { background: #f9f9f9; }
+.legend-item { display: inline-block; padding: 5px 10px; margin: 3px; border-radius: 4px; border: 1px solid #999; }
+.stat-box { display: inline-block; padding: 10px 15px; margin: 5px; background: #f0f8ff; border-radius: 6px; border: 1px solid #b0c4de; }
+.stat-number { font-size: 1.4em; font-weight: bold; color: #2e7d32; }
+.io-list { list-style: none; padding: 0; }
+.io-list li { padding: 4px 0; border-bottom: 1px solid #eee; }
+.purpose-box { background: #fffde7; border-left: 4px solid #fbc02d; padding: 12px; margin: 10px 0; }
+.editable { border: 1px dashed #ccc; padding: 8px; background: #fafafa; }
+.node-faint { opacity: 0.12 !important; filter: grayscale(0.5) saturate(0.4); }
+.node-active-group:not(.node-selected) { filter: drop-shadow(0 0 10px rgba(255,140,0,0.95)); animation: active-group-pulse 0.9s steps(2, end) infinite; }
+.node-active-group:not(.node-selected) rect, .node-active-group:not(.node-selected) circle, .node-active-group:not(.node-selected) ellipse, .node-active-group:not(.node-selected) polygon { stroke: #ff9800 !important; stroke-width: 3px !important; fill: rgba(255,152,0,0.16) !important; }
+.node-selected { filter: drop-shadow(0 0 12px rgba(211,47,47,0.95)) !important; }
+.node-selected rect, .node-selected circle, .node-selected ellipse, .node-selected polygon { stroke: #d32f2f !important; stroke-width: 4px !important; fill: rgba(211,47,47,0.18) !important; }
+.node-selected:not(.node-active-group) { filter: drop-shadow(0 0 12px rgba(211,47,47,0.95)); }
+@keyframes active-group-pulse { 0%,100% { filter: drop-shadow(0 0 8px rgba(255,140,0,0.9)); } 50% { filter: drop-shadow(0 0 18px rgba(255,140,0,1)); } }
+.edge-highlight-active path { stroke: #d32f2f !important; stroke-width: 2.5px !important; filter: drop-shadow(0 0 3px rgba(211,47,47,0.7)); }
+.edge-highlight-dim { opacity: 0.12; }
+</style>
+</head>
+<body>
+<div class="container">
+<h1>Grasshopper Definition Flowchart</h1>
+<p>This diagram shows how data flows between components. Hover over nodes and arrows to trace the logic.</p>
+<h2>Legend</h2>
+<span class="legend-item" style="background:#e1f5fe">Params</span>
+<span class="legend-item" style="background:#fff9c4">Maths</span>
+<span class="legend-item" style="background:#c8e6c9">Sets</span>
+<span class="legend-item" style="background:#ffccbc">Vector</span>
+<span class="legend-item" style="background:#f8bbd0">Curve</span>
+<span class="legend-item" style="background:#d1c4e9">Surface</span>
+<span class="legend-item" style="background:#b2dfdb">Mesh</span>
+<span class="legend-item" style="background:#ffe0b2">Intersect</span>
+<span class="legend-item" style="background:#b3e5fc">Transform</span>
+<span class="legend-item" style="background:#f0f4c3">Display</span>
+<span class="legend-item" style="background:#ffcdd2">GrasshopperTeklaLink</span>
+<span class="legend-item" style="background:#eeeeee">Default</span>
+
+</div>
+<div class="container">
+<h2>Definition Summary</h2>
+<div class="purpose-box">
+<strong>Detected Purpose:</strong>
+<p>This definition appears to perform curve processing and analysis. It contains 3 visible components across 2 categories, with 2 input(s) and 0 output(s).</p>
+</div>
+<h3>Description</h3>
+<div class="editable" contenteditable="true">
+Click here to add your own description of this Grasshopper definition...
+</div>
+<h3>Statistics</h3>
+<div class="stat-box"><span class="stat-number">3</span><br/>Components</div>
+<div class="stat-box"><span class="stat-number">3</span><br/>Parameters</div>
+<div class="stat-box"><span class="stat-number">2</span><br/>Connections</div>
+<div class="stat-box"><span class="stat-number">2</span><br/>Inputs</div>
+<div class="stat-box"><span class="stat-number">0</span><br/>Outputs</div>
+<h3>Category Breakdown</h3>
+<table>
+<tr><th>Category</th><th>Count</th><th>Percentage</th></tr>
+<tr><td>Params</td><td>2</td><td>66,7%</td></tr>
+<tr><td>Curve</td><td>1</td><td>33,3%</td></tr>
+</table>
+<h3>Inputs</h3>
+<ul class="io-list">
+<li><strong>Pt</strong> — Point</li>
+<li><strong>Pt</strong> — Point</li>
+</ul>
+<h3>Outputs</h3>
+<p>No explicit output parameters detected.</p>
+
+</div>
+<div class="container">
+<pre class="mermaid">
+flowchart LR
+
+    subgraph Curve["Curve"]
+        N0["Ln"]
+        style N0 fill:#f8bbd0,stroke:#333,stroke-width:2px
+    end
+
+    subgraph Params["Params"]
+        N1["Pt"]
+        style N1 fill:#e1f5fe,stroke:#333,stroke-width:2px
+        N2["Pt"]
+        style N2 fill:#e1f5fe,stroke:#333,stroke-width:2px
+    end
+
+    N1 --"A"--> N0
+    N2 --"B"--> N0
+
+</pre>
+</div>
+<div class="container">
+<h2>Component Summary</h2>
+<table>
+<tr><th>#</th><th>Component</th><th>Category</th><th>Inputs</th><th>Outputs</th></tr>
+<tr><td>1</td><td>Ln</td><td>Curve</td><td>A, B</td><td>L</td></tr>
+<tr><td>2</td><td>Pt</td><td>Params</td><td></td><td></td></tr>
+<tr><td>3</td><td>Pt</td><td>Params</td><td></td><td></td></tr>
+</table>
+
+</div>
+</body>
+</html>
