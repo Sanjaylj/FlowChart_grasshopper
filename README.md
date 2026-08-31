@@ -41,4 +41,4 @@ The post-build event copies the resulting `.gha` to `%APPDATA%\Grasshopper\Libra
 
 - `PluginInfo.cs` — Plugin metadata.
 - `Components/FlowChartComponent.cs` — The Grasshopper component.
-- `GhParser.cs` / `FlowchartRenderer.cs` — Shared parsing and rendering logic (copied from `GrasshopperFlowchartTool`)
+- `GhParser.cs` / `FlowchartRenderer.cs` — Shared parsing and rendering logic (copied from `GrasshopperFlowchartTool`).
